@@ -15,12 +15,6 @@ function activate(context) {
     });
 
     context.subscriptions.push(
-        vscode.window.onDidChangeWindowState(s => {
-            if (s.focused && pendingTerminalShow) {
-                pendingTerminalShow.show(false);
-                pendingTerminalShow = null;
-            }
-        }),
         { dispose: () => watcher?.close() }
     );
 }
