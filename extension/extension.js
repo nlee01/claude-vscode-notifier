@@ -37,21 +37,6 @@ async function findTerminalByPid(shellPid, retries = 3) {
     return null;
 }
 
-// Show terminal and wait for it to become activeTerminal before renaming
-async function renameTerminal(target, name) {
-    const prev = vscode.window.activeTerminal;
-    target.show(true); // preserveFocus=true, no flicker
-
-    const deadline = Date.now() + 500;
-    while (vscode.window.activeTerminal !== target && Date.now() < deadline) {
-        await new Promise(r => setTimeout(r, 10));
-    }
-
-    await vscode.commands.executeCommand('workbench.action.terminal.renameWithArg', { name });
-
-    if (prev && prev !== target) prev.show(true);
-}
-
 async function handleNotify(filename) {
     const filepath = path.join(NOTIFY_DIR, filename);
 
@@ -68,7 +53,7 @@ async function handleNotify(filename) {
     let data;
     try { data = JSON.parse(fs.readFileSync(filepath, 'utf8')); } catch (e) { return; }
 
-    const { shellPid, name, summary, workspacePath } = data;
+    const { shellPid, summary, workspacePath } = data;
 
     if (workspacePath) {
         const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
@@ -86,18 +71,14 @@ async function handleNotify(filename) {
     try { fs.unlinkSync(filepath); } catch (e) { return; } // claim
 
     const watching = target === vscode.window.activeTerminal && vscode.window.state.focused;
-
-    if (name && name !== 'claude session') {
-        await renameTerminal(target, name);
-    }
-
     if (watching) return;
 
     // macOS banner — click opens the right workspace, focus handler shows the terminal
     pendingTerminalShow = target;
     const wsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     const openCmd = wsPath ? `/opt/homebrew/bin/code "${wsPath}"` : 'open -a "Visual Studio Code"';
-    const label = summary ? `${name}: ${summary}` : `${name || 'Claude'}: Task complete`;
+    const termName = target.name || 'Claude';
+    const label = summary ? `${termName}: ${summary}` : `${termName}: Task complete`;
     const escaped = label.replace(/"/g, '\\"');
     const clickSignal = `echo '{}' > ${NOTIFY_DIR}/click.json`;
     const notifier = `${process.env.HOME}/.claude/notifier/claude-notifier.app/Contents/MacOS/terminal-notifier`;
