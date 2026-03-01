@@ -1,10 +1,10 @@
 # Claude Code Notifier for VS Code
 
-macOS notifications when Claude Code finishes a task in VS Code.
+macOS notifications when Claude Code needs your attention in VS Code.
 
 **What it does:**
-- Plays a sound and shows a macOS notification when Claude finishes
-- Renames the terminal tab to the first few words of your prompt (e.g. "fix auth bug")
+- Shows a macOS notification + sound when Claude finishes a task or needs your input (questions, permission prompts)
+- Uses your terminal tab name in the notification banner (rename tabs to identify sessions)
 - Clicking the notification opens the right VS Code workspace and switches to the Claude terminal
 - Works across multiple VS Code windows — each window only claims its own terminals
 
@@ -32,11 +32,11 @@ Then reload VS Code: `Cmd+Shift+P` → "Developer: Reload Window"
 
 | File | Location | Purpose |
 |------|----------|---------|
-| `notify.sh` | `~/.claude/notify.sh` | Claude Code stop hook — generates smart name + summary, writes notify file |
+| `notify.sh` | `~/.claude/notify.sh` | Claude Code hook — writes notify file with summary |
 | `claude-notifier.app` | `~/.claude/notifier/` | terminal-notifier with Claude icon |
-| `extension.js` | `~/.vscode/extensions/custom.claude-code-notifier-0.0.1/` | VS Code extension — renames tab, sends notification, handles click |
+| `extension.js` | `~/.vscode/extensions/custom.claude-code-notifier-0.0.1/` | VS Code extension — sends notification, handles click |
 
-The install script also adds a Stop hook to `~/.claude/settings.json`.
+The install script also adds Stop and Notification hooks to `~/.claude/settings.json`.
 
 ## Uninstall
 
@@ -46,14 +46,16 @@ rm -rf ~/.claude/notifier
 rm -rf ~/.vscode/extensions/custom.claude-code-notifier-0.0.1
 ```
 
-Remove the Stop hook entry from `~/.claude/settings.json` manually.
+Remove the Stop and Notification hook entries from `~/.claude/settings.json` manually.
 
 ## How it works
 
-1. Claude Code fires a Stop hook after each response
-2. `notify.sh` extracts a 3-word session name from your first message, grabs the last response as a summary, and writes a JSON file to `/tmp/claude-notify/`
-3. The VS Code extension watches that directory, filters by workspace path, matches the terminal by PID with retries, renames the tab, and sends a macOS notification
+1. Claude Code fires a **Stop** hook after each response and a **Notification** hook when it needs user input (questions, permission prompts)
+2. `notify.sh` writes a JSON file to `/tmp/claude-notify/` with the summary ("Needs your input" for notifications, last assistant message for stops)
+3. The VS Code extension watches that directory, filters by workspace path, matches the terminal by PID, and sends a macOS notification using your terminal tab name
 4. Clicking the notification runs `code <workspace-path>` to focus the right window, then the extension switches to the correct terminal
+
+**Tip:** To make notifications persist until dismissed, go to **System Settings → Notifications → terminal-notifier** and change from "Banners" to "Alerts".
 
 ## Attribution
 
